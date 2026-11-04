@@ -55,9 +55,21 @@ def load_data() -> pd.DataFrame:
 
 def calculate_fare_prediction(data, pickup, dropoff):
     """Calculate the predicted fare based on pickup and dropoff zipcodes."""
-    d = data[(data['pickup_zip'] == int(pickup)) & (data['dropoff_zip'] == int(dropoff))]
-    fare_prediction = d['fare_amount'].mean() if len(d) > 0 else 99
-    return f"Predicted Fare: ${fare_prediction:.2f}"
+    try:
+        d = data[(data['pickup_zip'] == int(pickup)) & (data['dropoff_zip'] == int(dropoff))]
+        fare_prediction = d['fare_amount'].mean() if len(d) > 0 else 99
+        return f"Predicted Fare: ${fare_prediction:.2f}"
+    except Exception:
+        return "Predicted Fare: $99.00"
+
+def calculate_max_fare(data, pickup, dropoff):
+    """Calculate the maximum possible fare based on pickup and dropoff zipcodes."""
+    try:
+        d = data[(data['pickup_zip'] == int(pickup)) & (data['dropoff_zip'] == int(dropoff))]
+        max_fare = d['fare_amount'].max() if len(d) > 0 else 0
+        return f"Max Possible Fare: ${max_fare:.2f}"
+    except Exception:
+        return "Max Possible Fare: $0.00"
 
 # Initialize the Dash app with Bootstrap styling
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
@@ -76,8 +88,12 @@ app.layout = dbc.Container([
             dbc.Input(id='from-zipcode', type='text', value='10003'),
             dbc.Label("To (zipcode)"),
             dbc.Input(id='to-zipcode', type='text', value='11238'),
-            dbc.Button("Predict", id='submit-button', n_clicks=0, color='primary', className='mt-3'),
-            html.Div(id='prediction-output', className='mt-3', style={'font-size': '24px', 'font-weight': 'bold'})
+            dbc.Row([
+                dbc.Col(dbc.Button("Predict Mean", id='submit-button', n_clicks=0, color='primary', className='mt-3 w-100')),
+                dbc.Col(dbc.Button("Max Fare", id='max-button', n_clicks=0, color='secondary', className='mt-3 w-100'))
+            ]),
+            html.Div(id='prediction-output', className='mt-3', style={'font-size': '20px', 'font-weight': 'bold'}),
+            html.Div(id='max-prediction-output', className='mt-2', style={'font-size': '20px', 'font-weight': 'bold', 'color': '#d9534f'})
         ], width=4)
     ]),
     dbc.Row([
@@ -108,6 +124,7 @@ def update_visuals(n_clicks):
         [{"headerName": col, "field": col} for col in data.columns]
     )
 
+# Callback for Predicted Mean Fare button
 @app.callback(
     Output('prediction-output', 'children'),
     Input('submit-button', 'n_clicks'),
@@ -117,6 +134,17 @@ def update_visuals(n_clicks):
 def render_prediction(n_clicks, pickup, dropoff):
     data = load_data()
     return calculate_fare_prediction(data, pickup, dropoff)
+
+# Callback for Maximum Possible Fare button
+@app.callback(
+    Output('max-prediction-output', 'children'),
+    Input('max-button', 'n_clicks'),
+    State('from-zipcode', 'value'),
+    State('to-zipcode', 'value')
+)
+def render_max_prediction(n_clicks, pickup, dropoff):
+    data = load_data()
+    return calculate_max_fare(data, pickup, dropoff)
 
 if __name__ == "__main__":
     # Debug mode is off by default; set DASH_DEBUG=true to enable it for local development.
